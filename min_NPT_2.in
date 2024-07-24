@@ -1,0 +1,15 @@
+Second minimization without positional constraints
+&cntrl
+ imin = 1,            ! Perform minimization
+ maxcyc = 10000,      ! Maximum number of cycles
+ ncyc = 5000,         ! Number of cycles of steepest descent followed by conjugate gradient
+ ntb = 2,             ! Constant pressure (NPT)
+ ntp = 1,             ! Isotropic pressure coupling
+ pres0 = 1.0,         ! Target pressure (1 atm)
+ taup = 2.0,          ! Pressure relaxation time (ps)
+ ntt = 3,             ! Langevin thermostat
+ temp0 = 300.0,       ! Target temperature (300 K)
+ gamma_ln = 5.0,      ! Collision frequency for Langevin dynamics (5 ps^-1)
+ barostat = 2,        ! Berendsen barostat
+ cut = 10.0           ! Nonbonded cutoff (Å)
+/

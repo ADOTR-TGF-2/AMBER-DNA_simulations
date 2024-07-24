@@ -1,0 +1,18 @@
+Heating from 0 K to 300 K
+&cntrl
+ imin = 0,            ! No minimization
+ irest = 0,           ! No restart
+ ntx = 1,             ! Read coordinates but not velocities
+ nstlim = 33333,      ! Number of MD steps (50 ps)
+ dt = 0.0015,         ! Time step (1.5 fs)
+ ntc = 2,             ! SHAKE on for hydrogen-containing bonds
+ ntf = 2,             ! Force evaluation excluding bonded hydrogen interactions
+ ntb = 1,             ! Constant volume (NVT)
+ ntt = 3,             ! Langevin thermostat
+ gamma_ln = 5.0,      ! Collision frequency for Langevin dynamics (5 ps^-1)
+ tempi = 0.0,         ! Initial temperature (0 K)
+ temp0 = 300.0,       ! Target temperature (300 K)
+ ntpr = 1000,         ! Print every 1000 steps
+ ntwx = 1000,         ! Write to trajectory every 1000 steps
+ cut = 10.0           ! Nonbonded cutoff (Å)
+/

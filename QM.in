@@ -1,0 +1,24 @@
+Equilibration of DNA with QM/MM
+&cntrl
+  imin = 0,                 ! No minimization
+  ntx = 5,                  ! Read coordinates and velocities from restart file
+  irest = 1,                ! Restart simulation from a previous run
+  nstlim = 500,           ! Number of MD steps (adjust as needed)
+  dt = 0.0001,               ! Time step (ps)
+  ntc = 1,                  ! No SHAKE, allow bond breaking
+  ntf = 1,                  ! Calculate all forces
+  ntb = 1,                  ! Constant volume (NVE ensemble)
+  ntp = 0,                  ! No pressure coupling
+  cut = 8.0,                ! Nonbonded cutoff (Angstroms)
+  ifqnt = 1,                ! QM/MM flag
+  ntpr = 10,               ! Print to output file every 500 steps
+  ntwx = 10,               ! Write to trajectory file every 500 steps
+  ntwr = 10,               ! Write to restart file every 500 steps
+/
+&qmmm
+  !iqmatoms=1,2,              ! Define QM region (HO5' hydrogen atom and its bonded partner; adjust as necessary)
+  qmmask=":1@HO5'",
+  qm_theory='DFTB',          ! QM theory (can be adjusted to other methods like PM3, AM1, etc.)
+  qmcharge=1                 ! Total charge of the QM region
+/
+

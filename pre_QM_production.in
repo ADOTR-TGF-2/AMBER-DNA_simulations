@@ -1,0 +1,21 @@
+Production MD run
+    &cntrl
+      imin = 0,            ! No minimization
+      irest = 1,           ! Restart simulation
+      ntx = 5,             ! Read coordinates and velocities from the restart file
+      nstlim = 50000,      ! Number of MD steps (5 ns with a 1.5 fs timestep is 3333333 steps)
+      dt = 0.0015,         ! Time step (1.5 fs)
+      ntc = 2,             ! SHAKE on for hydrogen-containing bonds
+      ntf = 2,             ! Force evaluation excluding bonded hydrogen interactions
+      ntb = 2,             ! Constant pressure (NPT)
+      ntp = 1,             ! Isotropic pressure coupling
+      pres0 = 1.0,         ! Target pressure (1 atm)
+      taup = 2.0,          ! Pressure relaxation time (ps)
+      ntt = 3,             ! Langevin thermostat
+      temp0 = 300.0,       ! Target temperature (300 K)
+      gamma_ln = 1.0,      ! Collision frequency for Langevin dynamics (1 ps^-1)
+      barostat = 2,        ! Berendsen barostat
+      ntpr = 1000,         ! Print every 1000 steps
+      ntwx = 1000,         ! Write to trajectory every 1000 steps
+      cut = 10.0           ! Nonbonded cutoff (Å)
+    /

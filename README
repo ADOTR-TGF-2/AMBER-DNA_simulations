@@ -1,0 +1,236 @@
+Step 1:
+Prepare and solvate the dna 
+-run the dna pdb file through ambers pdb file tool
+-create leap input file called solvate_dna.in
+
+    # Source the AMBER force field for DNA
+    source leaprc.DNA.bsc1
+
+    # Source the TIP3P water model
+    source leaprc.water.tip3p
+
+    # Load the DNA structure from the PDB file
+    dna = loadPDB "1bna_amber.pdb"
+
+    # Solvate the DNA in a rectangular box with specified dimensions
+    solvateBox dna TIP3PBOX {49.2 49.7 72.7}
+
+    # Add potassium ions (K+) to neutralize the system automatically
+    addIonsRand dna K+ 0
+
+    # Save the AMBER parameter/topology file
+    saveAmberParm dna dna_bsc1.prmtop dna_bsc1.inpcrd
+
+    # Save the solvated structure as a PDB file
+    savePDB dna dna_solvated_bsc1.pdb
+
+    # Quit tleap
+    quit
+
+-run the leap input file
+$ tleap -f solvate_dna.in
+*** The following info and more can be found in leap.log: 
+22 K+ ions added to the system. Leap added 432 missing atoms according to residue templates: 432 H / lone pairs
+Volume: 3428508.064 A^3 ; Total mass 1863242.828 amu ; Density 0.902 g/cc ***
+
+Step 2:
+run two Minimization runs: Relax the water molecules around the Solute (DNA) with the DNA position restricted followed by the same run but with the DNA unrestricted.
+First run:
+1. NPT specific
+2. P = 1atm, T = 300K
+3. Berendson barostat
+4. Langevin thermostat with collision frequency of 5/ps
+5. harmonic position restraints of 50kcal/mol/A^2 on DNA atoms
+
+-create min_NPT_1.in input file 
+    Initial minimization under NPT conditions with restraints
+    &cntrl
+      imin = 1,            ! Perform minimization
+      maxcyc = 10000,      ! Maximum number of cycles
+      ncyc = 5000,         ! Number of cycles of steepest descent followed by conjugate gradient
+      ntb = 2,             ! Constant pressure (NPT)
+      ntp = 1,             ! Isotropic pressure coupling
+      pres0 = 1.0,         ! Target pressure (1 atm)
+      taup = 2.0,          ! Pressure relaxation time (ps)
+      ntt = 3,             ! Langevin thermostat
+      temp0 = 300.0,       ! Target temperature (300 K)
+      gamma_ln = 5.0,      ! Collision frequency for Langevin dynamics (5 ps^-1)
+      barostat = 2,        ! Berendsen barostat
+      cut = 10.0,          ! Nonbonded cutoff (Å)
+      ntr = 1,             ! Turn on restraints
+      restraint_wt = 50.0, ! Restraint weight (kcal/mol·Å²)
+      restraintmask = ':1-6', ! Apply restraints to the DNA residues 1 to 6
+    /
+    
+Explanation of Parameters
+NPT Specific:
+ntb = 2: Indicates constant pressure (NPT) conditions.
+ntp = 1: Specifies isotropic pressure coupling.
+
+Pressure and Temperature:
+pres0 = 1.0: Sets the target pressure to 1 atm.
+temp0 = 300.0: Sets the target temperature to 300 K.
+
+Barostat:
+barostat = 2: Uses the Berendsen barostat for pressure control.
+
+Thermostat:
+ntt = 3: Uses the Langevin thermostat.
+gamma_ln = 5.0: Sets the collision frequency for the Langevin thermostat to 5 ps^-1.
+
+Harmonic Position Restraints:
+ntr = 1: Turns on positional restraints.
+restraint_wt = 50.0: Sets the restraint weight to 50 kcal/mol·Å².
+restraintmask = ':1-6': Applies the restraints to DNA residues 1 to 6.
+
+-Start the first minimization run:
+$ sander -O -i min_NPT_1.in -o min_NPT_1.out -p dna_bsc1.prmtop -c dna_bsc1.inpcrd -ref dna_bsc1.inpcrd -r min_NPT_1.rst
+
+Second Run:
+1. NPT specific
+2. P = 1atm, T = 300K
+3. Berendson barostat
+4. Langevin thermostat with collision frequency of 5/ps
+5. No harmonic position restraints
+
+-create min_NPT_2.in input file 
+    Second minimization without positional constraints
+    &cntrl
+      imin = 1,            ! Perform minimization
+      maxcyc = 10000,      ! Maximum number of cycles
+      ncyc = 5000,         ! Number of cycles of steepest descent followed by conjugate gradient
+      ntb = 2,             ! Constant pressure (NPT)
+      ntp = 1,             ! Isotropic pressure coupling
+      pres0 = 1.0,         ! Target pressure (1 atm)
+      taup = 2.0,          ! Pressure relaxation time (ps)
+      ntt = 3,             ! Langevin thermostat
+      temp0 = 300.0,       ! Target temperature (300 K)
+      gamma_ln = 5.0,      ! Collision frequency for Langevin dynamics (5 ps^-1)
+      barostat = 2,        ! Berendsen barostat
+      cut = 10.0           ! Nonbonded cutoff (Å)
+    /
+
+-Start the second minimization run:
+$ sander -O -i min_NPT_2.in -o min_NPT_2.out -p dna_bsc1.prmtop -c min_NPT_1.rst -r min_NPT_2.rst  
+
+Explanation
+Input File (-i min_NPT_2.in): Specifies the input file for the second minimization.
+Output File (-o min_NPT_2.out): Specifies the output file for the minimization log.
+Topology File (-p dna_bsc1.prmtop): Specifies the topology file.
+Coordinate File (-c min_NPT_1.rst): Uses the restart file from the first minimization as the starting coordinates.
+Restart File (-r min_NPT_2.rst): Specifies the file to write the minimized coordinates.
+
+Step 3:
+Heating equilibration run to heat the system from 0 to 300 K using NVT
+stepwise simulations, for a total of 50 ps at 1.5fs steps.  
+
+1. NVT specific
+2. Start at 0K
+3. Equilibrate to 300K
+4. Langevin thermostat with collision frequency of 5/ps
+5. Shake algorithm to contrain Hydrogen atoms
+
+-create the input file heat.in:
+Heating from 0 K to 300 K
+    &cntrl
+      imin = 0,            ! No minimization
+      irest = 0,           ! No restart
+      ntx = 1,             ! Read coordinates but not velocities
+      nstlim = 33333,      ! Number of MD steps (50 ps)
+      dt = 0.0015,         ! Time step (1.5 fs)
+      ntc = 2,             ! SHAKE on for hydrogen-containing bonds
+      ntf = 2,             ! Force evaluation excluding bonded hydrogen interactions
+      ntb = 1,             ! Constant volume (NVT)
+      ntt = 3,             ! Langevin thermostat
+      gamma_ln = 5.0,      ! Collision frequency for Langevin dynamics (5 ps^-1)
+      tempi = 0.0,         ! Initial temperature (0 K)
+      temp0 = 300.0,       ! Target temperature (300 K)
+      ntpr = 1000,         ! Print every 1000 steps
+      ntwx = 1000,         ! Write to trajectory every 1000 steps
+      cut = 10.0           ! Nonbonded cutoff (Å)
+    /
+
+-Start the equilibration run:
+$ sander -O -i heat.in -o heat.out -p dna_bsc1.prmtop -c min_NPT_2.rst -r heat.rst -x heat.nc
+
+Explanation
+Input File (-i heat.in): Specifies the input file for the heating simulation.
+Output File (-o heat.out): Specifies the output file for the heating simulation log.
+Topology File (-p dna_bsc1.prmtop): Specifies the topology file.
+Coordinate File (-c min_NPT_2.rst): Uses the restart file from the second minimization as the starting coordinates.
+Restart File (-r heat.rst): Specifies the file to write the heated coordinates.
+Trajectory File (-x heat.nc): Specifies the file to write the trajectory data.
+
+Step 4:
+pre-QM/MM production run 
+1. NPT production run
+2. 5 ns with 1.5fs steps
+3. Berendson barostat
+4. Langevin thermostat with collision frequency of 1/ps
+5. Shake algorithm 
+6. Start this run using the exact coordinates and temperature from the previous heat run restart file
+
+-create input file pre_QM_production.in
+    Production MD run
+    &cntrl
+      imin = 0,            ! No minimization
+      irest = 1,           ! Restart simulation
+      ntx = 5,             ! Read coordinates and velocities from the restart file
+      nstlim = 3333333,    ! Number of MD steps (5 ns with a 1.5 fs timestep)
+      dt = 0.0015,         ! Time step (1.5 fs)
+      ntc = 2,             ! SHAKE on for hydrogen-containing bonds
+      ntf = 2,             ! Force evaluation excluding bonded hydrogen interactions
+      ntb = 2,             ! Constant pressure (NPT)
+      ntp = 1,             ! Isotropic pressure coupling
+      pres0 = 1.0,         ! Target pressure (1 atm)
+      taup = 2.0,          ! Pressure relaxation time (ps)
+      ntt = 3,             ! Langevin thermostat
+      temp0 = 300.0,       ! Target temperature (300 K)
+      gamma_ln = 1.0,      ! Collision frequency for Langevin dynamics (1 ps^-1)
+      barostat = 2,        ! Berendsen barostat
+      ntpr = 1000,         ! Print every 1000 steps
+      ntwx = 1000,         ! Write to trajectory every 1000 steps
+      cut = 10.0           ! Nonbonded cutoff (Å)
+    /
+
+-Start the production run
+$ sander -O -i pre_QM_production.in -o pre_QM_production.out -p dna_bsc1.prmtop -c heat.rst -r pre_QM_production.rst -x pre_QM_production.nc
+
+
+Step 5:
+Test QM/MM equilibration
+Do a short QM/MM run on the unmodified restart file from the pre-QM/MM production run to test for stability of the system
+We want to see that the dna in the QM region remains stable
+
+- create input file QM.in
+Equilibration of DNA with QM/MM
+&cntrl
+  imin = 0,                 ! No minimization
+  ntx = 5,                  ! Read coordinates and velocities from restart file
+  irest = 1,                ! Restart simulation from a previous run
+  nstlim = 1000,            ! Number of MD steps (adjust as needed)
+  dt = 0.0001,              ! Time step (ps)
+  ntc = 1,                  ! No SHAKE, allow bond breaking
+  ntf = 1,                  ! Calculate all forces
+  ntb = 1,                  ! Constant volume (NVE ensemble)
+  ntp = 0,                  ! No pressure coupling
+  cut = 8.0,                ! Nonbonded cutoff (Angstroms)
+  !ifqnt = 1,               ! QM/MM flag
+  ntpr = 10,                ! Print to output file every 500 steps
+  ntwx = 10,                ! Write to trajectory file every 500 steps
+  ntwr = 10,                ! Write to restart file every 500 steps
+/
+&qmmm
+  !iqmatoms=1,2,            ! Define QM region (HO5' hydrogen atom and its bonded partner; adjust as necessary)
+  qmmask=":1@HO5'",
+  qm_theory='DFTB',         ! QM theory (can be adjusted to other methods like PM3, AM1, etc.)
+  qmcharge=1                ! Total charge of the QM region
+/
+
+-Start the QM test run
+$ sander -O -i QM.in -o QM_unmodified.out -p dna_bsc1.prmtop -c pre_QM_production.rst -r QM_unmodified.rst -x QM_unmodified.nc
+
+
+
+
+

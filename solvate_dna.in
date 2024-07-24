@@ -1,0 +1,24 @@
+# Source the AMBER force field for DNA
+source leaprc.DNA.bsc1
+
+# Source the TIP3P water model
+source leaprc.water.tip3p
+
+# Load the DNA structure from the PDB file
+dna = loadPDB "1bna_amber.pdb"
+
+# Solvate the DNA in a rectangular box with specified dimensions
+solvateBox dna TIP3PBOX {49.2 49.7 72.7}
+
+# Add potassium ions (K+) to neutralize the system automatically
+addIonsRand dna K+ 0
+
+# Save the AMBER parameter/topology file
+saveAmberParm dna dna_bsc1.prmtop dna_bsc1.inpcrd
+
+# Save the solvated structure as a PDB file
+savePDB dna dna_solvated_bsc1.pdb
+
+# Quit tleap
+quit
+
